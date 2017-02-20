@@ -32,37 +32,54 @@ class MarvelParser:
             The Hunger: Part 1 of 5,1,The Spectacular Spider-Man Vol 2,"September, 2003",1,1
             The Hunger: Part 2 of 5,2,The Spectacular Spider-Man Vol 2,"September, 2003",2,1
         """
-
         print(issue_url)
-
         page = requests.get(issue_url)
         tree = html.fromstring(page.content)
 
+        # Issue Name
         issueName = tree.xpath(
-            # '//*[@id="mw-content-text"]/table[1]/tr/td/div/table/tr/th/div/b/a'
-            # '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/table/tr[1]/th/div/b/a')[0].strip()
-            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/table/tr[1]/th/div/b/a/text()')[0].strip()
-        seriesName = tree.xpath(
-            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[1]/a/text()')[0].strip()
+            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/table/tr[1]/th/div/b/a/text()')
+        if len(issueName) > 1:
+            issueName = issueName[0].strip() + ' & ' + issueName[1].strip()
+        elif len(issueName) == 1:
+            issueName = issueName[0]
+        elif len(issueName) == 0:
+            issueName = ""
 
+        # Series Name
+        seriesName = tree.xpath(
+            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[1]/a/text()')
+        if len(seriesName) == 0:
+            seriesName = tree.xpath('//*[@id="mw-content-text"]/table[2]/tr[1]/td/div/div[2]/div[1]/a/text()')[
+                0].strip()
+        else:
+            seriesName = seriesName[0].strip()
+        seriesName = seriesName.replace('  ', ' ')
+
+        # Image URL
         imageURL = tree.xpath(
             '//*[@id="templateimage"]/div/div/a/img/@src')[0]
         imageURL = imageURL[:imageURL.find('.jpg') + 4].strip()
 
+        # Issue Number
         issueNum = tree.xpath(
-            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[1]/text()')[0]
+            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[1]/text()')
+        if len(issueNum) == 0:
+            issueNum = tree.xpath('//*[@id="mw-content-text"]/table[2]/tr[1]/td/div/div[2]/div[1]/text()')
+        issueNum = issueNum[0].strip()
         issueNum = issueNum[issueNum.find('#') + 1:].strip()
 
-        releaseDate = tree.xpath(
-            '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/a/text()')
-        if len(releaseDate) == 0:
-            releaseDate = tree.xpath('//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/div[4]/a/text()')
-        elif len(releaseDate) == 0:
-            releaseDate = tree.xpath('//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/div[4]/text()')
-        else:
-            releaseDate = releaseDate[0].strip() + ', ' + releaseDate[1].strip()
+        # Release Date
+        releaseDateXpaths = ['//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/a/text()',
+                             '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/div[4]/a/text()',
+                             '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/div[4]/text()',
+                             '//*[@id="mw-content-text"]/table[2]/tr[1]/td/div/div[2]/div[2]/div[4]/a/text()']
+        releaseDate = [tree.xpath(currentXpath) for currentXpath in releaseDateXpaths if tree.xpath(currentXpath)]
         print(releaseDate)
-        releaseDate.strip()
+        if len(releaseDate[0]) > 1:
+            releaseDate = releaseDate[0][0] + ', ' + releaseDate[0][1]
+        else:
+            releaseDate = releaseDate[0][0]
 
         print(releaseDate)
         entry = [issueName, issueNum, seriesName, releaseDate, imageURL]
@@ -70,7 +87,7 @@ class MarvelParser:
 
     # write to character.csv
     # charName, typeOfChar, earthID, issueID, charID
-    def save_character_data(self, data, columns, here):
+    def save_character_data(self, issue_url):
         """
             Write a character data as a csv file
 
@@ -84,6 +101,9 @@ class MarvelParser:
         """
         # For each parameter,
         #    save it in the proper column
+        print(issue_url)
+        page = requests.get(issue_url)
+        tree = html.fromstring(page.content)
 
     def parse_series_data(self):
         """
@@ -106,6 +126,7 @@ class MarvelParser:
             issue_url_endings = tree.xpath('//*[contains(@id,"gallery")]/div[*]/div[*]/div/b/a/@href')
             issue_urls = [home_url + issue for issue in issue_url_endings]
             [self.save_issue_data(issue_url) for issue_url in issue_urls]
+            # [self.save_character_data(issue_url) for issue_url in issue_urls]
 
     def grab_series_url(self):
         """
@@ -137,16 +158,10 @@ class MarvelParser:
 
 
 # =====================================================================================================================
-
-
 #   Executable
 # =====================================================================================================================
 
 if __name__ == "__main__":
-    # default = MarvelParser()
-    # print("Default:\n")
-    # default.grab_series_url()
-
-    twok = MarvelParser(2000)
-    print("2000+:\n")
+    twok = MarvelParser()
+    print("All+:\n")
     twok.parse()
