@@ -75,14 +75,14 @@ class MarvelParser:
                              '//*[@id="mw-content-text"]/table[1]/tr[1]/td/div/div[2]/div[2]/div[4]/text()',
                              '//*[@id="mw-content-text"]/table[2]/tr[1]/td/div/div[2]/div[2]/div[4]/a/text()']
         releaseDate = [tree.xpath(currentXpath) for currentXpath in releaseDateXpaths if tree.xpath(currentXpath)]
-        print(releaseDate)
         if len(releaseDate[0]) > 1:
             releaseDate = releaseDate[0][0] + ', ' + releaseDate[0][1]
         else:
             releaseDate = releaseDate[0][0]
 
         print(releaseDate)
-        entry = [issueName, issueNum, seriesName, releaseDate, imageURL]
+        entry = [issueName.replace('\"', ''), issueNum.replace('\"', ''), seriesName.replace('\"', ''), releaseDate,
+                 imageURL]
         print(entry)
 
     # write to character.csv
@@ -90,7 +90,6 @@ class MarvelParser:
     def save_character_data(self, issue_url):
         """
             Write a character data as a csv file
-
             example:
 
             "Name","Race","Homeworld","Affiliation"
@@ -109,24 +108,24 @@ class MarvelParser:
         """
             Grabs a comic series's data and calls another function to write the data to an excel spreadsheet
         """
-
         # Go to a series URL
         # For every issue in the series,
         #   click it and parse all data of that issue
         #   save it as a list
         #   pass all data in that issues page to save_series_data funtcion
-
         valid_series_urls = self.grab_series_url()
 
         for series_url in valid_series_urls:
             page = requests.get(series_url)
             tree = html.fromstring(page.content)
-
             home_url = 'http://marvel.wikia.com'
             issue_url_endings = tree.xpath('//*[contains(@id,"gallery")]/div[*]/div[*]/div/b/a/@href')
             issue_urls = [home_url + issue for issue in issue_url_endings]
             [self.save_issue_data(issue_url) for issue_url in issue_urls]
             # [self.save_character_data(issue_url) for issue_url in issue_urls]
+
+    def parse(self):
+        self.parse_series_data()
 
     def grab_series_url(self):
         """
@@ -134,12 +133,10 @@ class MarvelParser:
 
             Grabs the series that start after this MarvelParsers yearToStart year.
         """
-
         # For every comic visible at the given link
         #   look for series that start on or after year_to_start
         #   add that series URL to the list
         # return that valid_series_urls
-
         page = requests.get(self.all_comics_url)
         tree = html.fromstring(page.content)
 
@@ -147,14 +144,9 @@ class MarvelParser:
         series_start_dates = tree.xpath('//*[@id="gallery-0"]/div[*]/div[2]/center/i/a[1]/text()')
         series_start_dates = list(map(int, series_start_dates))
         series_urls = tree.xpath('//*[@id="gallery-0"]/div[*]/div[*]/center[i/a[1]/@href]/b/a/@href')
-
         valid_series_urls = [home_url + comic for index, comic in enumerate(series_urls)
                              if series_start_dates[index] >= self.year_to_start]
-
         return valid_series_urls
-
-    def parse(self):
-        self.parse_series_data()
 
 
 # =====================================================================================================================
@@ -162,6 +154,6 @@ class MarvelParser:
 # =====================================================================================================================
 
 if __name__ == "__main__":
-    twok = MarvelParser()
+    spiderman = MarvelParser()
     print("All+:\n")
-    twok.parse()
+    spiderman.parse()
