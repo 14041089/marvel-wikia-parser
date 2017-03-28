@@ -89,25 +89,27 @@ class MarvelParser:
         page = requests.get(self.base_url + character_url)
         tree = html.fromstring(page.content)
         # Character Name
-        character_name = tree.xpath(
-            '')
-        # Earth ID
-        earth_id = tree.xpath(
-            '')
-        # Homeworld
-        homeworld = tree.xpath(
-            '')
-        # Affiliation
-        affiliation = tree.xpath(
-            '')
+        character_name = str(tree.xpath(
+            '//*[@id="WikiaPageHeader"]/div/div[1]/h1/text()')[0])
+        begin = character_name.find('Wiki/') + 5
+        end = character_name.rfind(' (Earth')
+        if end < 0:
+            character_name = character_name[begin:]
+        else:
+            character_name = character_name[begin:end]
         # Type of Character
         type_of_char = ""
-        if index == 1:
+        if index == 0:
             type_of_char = "Protagonist"
-        elif index == 2:
+        elif index == 1:
             type_of_char = "Supporting"
-        elif index == 3:
+        elif index == 2:
             type_of_char = "Antagonist"
+        # Earth ID
+        earth_id = tree.xpath(
+            '//*[@id="mw-content-text"]/div[1]/aside/section[3]/div[2]/div/a/text()')
+        print(character_name)
+        print([character_name, type_of_char, earth_id])
 
     # list of character url
     def parse_characters_data(self, list_of_characters, index):
@@ -129,15 +131,21 @@ class MarvelParser:
         tree = html.fromstring(page.content)
 
         featured_character_url = tree.xpath(
-            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]/' +
-            'following::p[b[contains(text(), "Featured Characters")]]/following::ul[1]//a/@href')
+            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]/following::' +
+            'p[b[contains(text(), "Featured Characters")]]/following::ul[1]/li//' +
+            'a[not(contains(@class, "image"))]/@href')
         supporting_character_url = tree.xpath(
-            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]' +
-            '/following::p[b[contains(text(), "Supporting Characters")]]/following::ul[1]//a/@href')
+            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]/following::' +
+            'p[b[contains(text(), "Supporting Characters")]]/following::' +
+            'ul[1]//li//a[not(contains(@title, "Appearance"))]/@href')
         antagonist_character_url = tree.xpath(
-            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]' +
-            '/following::p[b[contains(text(), "Antagonists")]]/following::ul[1]//a/@href')
-        all_types_of_characters = [featured_character_url, supporting_character_url, antagonist_character_url]
+            '//div[@id="mw-content-text"]/h2[@id="AppearingHeader1"]/following::' +
+            'p[b[contains(text(), "Antagonists")]]/following::' +
+            'ul[1]//a[not(contains(@title, "Appearance"))]/@href')
+        # Make a list of all character url's and create a set of them to remove reoccurences
+        # if there are two stories in an issue
+        all_types_of_characters = [list(set(url_list)) for url_list in
+                                   [featured_character_url, supporting_character_url, antagonist_character_url]]
         #                         (list_of_url  index)     [list_of_url, list_of_url, list_of_url]
         [self.parse_characters_data(characters, index) for index, characters in
          enumerate(all_types_of_characters) if len(characters) > 0]
@@ -159,7 +167,7 @@ class MarvelParser:
             issue_url_endings = tree.xpath('//*[contains(@id,"gallery")]/div[*]/div[*]/div/b/a/@href')
             issue_urls = [home_url + issue for issue in issue_url_endings]
             [self.save_issue_data(issue_url) for issue_url in issue_urls]
-            [self.parse_characters_url(issue_url) for issue_url in issue_urls]
+            # [self.parse_characters_url(issue_url) for issue_url in issue_urls]
 
     def parse(self):
         self.parse_series_data()
