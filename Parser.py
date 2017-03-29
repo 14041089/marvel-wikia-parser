@@ -27,16 +27,18 @@ class MarvelParser:
         self.characters = []
         self.issues = []
 
-    def csv_save(self, data):
-        print("not done yet")
-        # if len(data) == 4:
-        #    with open("character.csv", 'w') as resultFile:
-        #        wr = csv.writer(resultFile, dialect='excel')
-        #        wr.writerows(data)
-        # elif len(data) == 5:
-        #    with open("issue.csv", 'w') as resultFile:
-        #        wr = csv.writer(resultFile, dialect='excel')
-        #        wr.writerows(data)")
+    def csv_save(self):
+        [issue.append(issueID) for issueID, issue in enumerate(self.issues)]
+        with open("character.csv", 'w', newline='') as characters_file:
+            writer = csv.writer(characters_file, quoting=csv.QUOTE_ALL)
+            header = ['charName', 'typeOfChar', 'earthID', 'issueID']
+            self.characters.insert(0, header)
+            writer.writerows(self.characters)
+        with open("issue.csv", 'w', newline='') as issues_file:
+            writer = csv.writer(issues_file, quoting=csv.QUOTE_ALL)
+            header = ['issueName', 'issueNum', 'seriesName', 'releaseDate', 'imageURL', 'issueID']
+            self.issues.insert(0, header)
+            writer.writerows(self.issues)
 
     def data_save(self, data):
         if len(data) == 4:
@@ -104,13 +106,15 @@ class MarvelParser:
             release_date = release_date[0][0] + ', ' + release_date[0][1]
         else:
             release_date = release_date[0][0]
+        if not issue_name:
+            issue_name = series_name + " Issue " + issue_num
         issue_data = [issue_name.replace('\"', ''),
                       issue_num.replace('\"', ''),
                       series_name.replace('\"', ''),
                       release_date,
                       image_url]
         self.data_save(issue_data)
-        print(issue_data)
+        # print(issue_data)
 
     def save_character_data(self, character_url, index, issueID):
         url = self.base_url + character_url
@@ -141,14 +145,18 @@ class MarvelParser:
         else:
             eid_ind = character_url.find('(Earth-')
             if eid_ind >= 0:
-                earth_id = character_url[eid_ind + 1:-1]
+                earth_id = character_url[eid_ind + 1:]
+                eid_ind_end = earth_id.find(")")
+                earth_id = character_url[:eid_ind_end]
             else:
-                earth_id = ''
+                earth_id = 'N/A'
+        if earth_id.find("Earth-") < 0:
+            earth_id = 'N/A'
         character_data = [character_name, type_of_char, earth_id, str(issueID)]
         # print(character_data[0] + " : " + character_url)
         # print(character_data)
         self.data_save(character_data)
-        print(character_data)
+        # print(character_data)
 
     # list of character url
     def parse_characters_data(self, list_of_characters, index, issueID):
@@ -208,7 +216,7 @@ class MarvelParser:
             issue_url_endings = tree.xpath(
                 '//*[contains(@id,"gallery")]/div[*]/div[*]/div/b/a/@href')
             issue_urls = [home_url + issue for issue in issue_url_endings]
-            # [self.save_issue_data(issue_url) for issue_url in issue_urls]
+            [self.save_issue_data(issue_url) for issue_url in issue_urls]
             [self.parse_characters_url(issueID, issue_url) for issueID, issue_url in
              enumerate(issue_urls, 1)]
 
@@ -243,6 +251,9 @@ class MarvelParser:
 # =====================================================================================================================
 
 if __name__ == "__main__":
-    spiderman = MarvelParser(2014)
-    print("All+:\n")
+    spiderman = MarvelParser(2015)
     spiderman.parse()
+    print(spiderman.issues)
+    print(spiderman.characters)
+    spiderman.csv_save()
+    print("Done!")
